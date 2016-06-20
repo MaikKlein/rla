@@ -3,7 +3,7 @@ use typenum::*;
 use generic_array::*;
 use std::ops::{Add, Sub, Mul, Div};
 use std::mem;
-#[derive(Copy, Debug)]
+#[derive(PartialEq, Eq, Copy, Debug)]
 pub struct Vector<T: Float, N: ArrayLength<T>>
     where N::ArrayType: Copy
 {
@@ -16,7 +16,7 @@ impl<T, N> Clone for Vector<T, N>
           T: Float
 {
     fn clone(&self) -> Self {
-        Vector::<T, N> { data: self.data.clone() }
+        Vector::<T, N> { data: self.data }
     }
 }
 
@@ -85,9 +85,32 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
           N::ArrayType: Copy,
           Vector<T, N>: Copy
 {
+    /// Builds a Vector<T, N > from a Vector<T, N-1> with an additional value.
+    /// # Example
+    /// ```
+    /// use rla::vector::*;
+    /// let v = Vec3f::from_one_less(Vec2f::new(&[1.0, 2.0]), 3.0);
+    /// assert!(v == Vec3f::new(&[1.0, 2.0, 3.0]));
+    /// ```
+    pub fn from_one_less<>(first: Vector<T, Sub1<N>>, val: T) -> Vector<T, N>
+        where N: Sub<B1>,
+              <N as Sub<B1>>::Output: ArrayLength<T>,
+              <<N as Sub<B1>>::Output as ArrayLength<T>>::ArrayType: Copy
+    {
+        unsafe{
+            let mut data: GenericArray<T, N> = mem::uninitialized();
+            for (index, val) in first.data.iter().enumerate(){
+                data[index] = *val;
+            }
+            data[N::to_usize() - 1] = val;
+            Vector::<T, N>{ data: data }
+        }
+    }
+
     pub fn new(slice: &[T]) -> Vector<T, N> {
         Vector::<T, N> { data: GenericArray::from_slice(slice) }
     }
+
     pub fn zero() -> Vector<T, N> {
         unsafe {
             let mut data: GenericArray<T, N> = mem::uninitialized();
@@ -99,7 +122,7 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
     }
 
     pub fn max(self) -> T {
-        self.data.iter().fold(self.data[0].clone(), |acc, &x| {
+        self.data.iter().fold(self.data[0], |acc, &x| {
             if x > acc {
                 x
             } else {
@@ -109,10 +132,10 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
     }
 
     pub fn dot(self, other: Self) -> T {
-        return self.data
+        self.data
             .iter()
             .zip(other.data.iter())
-            .fold(T::zero(), |acc, (x, y)| acc + *x * *y);
+            .fold(T::zero(), |acc, (x, y)| acc + *x * *y)
     }
 
     pub fn length_sq(self) -> T {
@@ -147,15 +170,30 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
     }
 
     pub fn distance(self, other: Self) -> T {
-        self.distance(other).sqrt()
+        self.distance_sq(other).sqrt()
     }
 }
 
 #[test]
 fn mul_v() {
     let v = Vec2f::new(&[1.0, 2.0]);
-    let v1 = v * 1.0;
+    assert!(v + v == v * 2.0);
 }
+
+#[test]
+fn distance_vec() {
+    let v1 = Vec2f::new(&[0.0, 2.0]);
+    let v2 = Vec2f::new(&[0.0, 10.0]);
+    assert!(v1.distance(v2) == 8.0);
+    assert!(v1.length_sq() == 4.0);
+    assert!(v1.length() == 2.0);
+    assert!(v2.normalize().unwrap() == Vec2f::new(&[0.0, 1.0]));
+    let n = Vec2f::new(&[0.0, 1.0]);
+    let reflect_v1 = Vec2f::new(&[1.0, -1.0]);
+    assert!(reflect_v1.reflect(n) == Vec2f::new(&[1.0, 1.0]));
+    Vec3f::from_one_less(v1, 1.0);
+}
+
 
 pub type Vec4<T> = Vector<T, U4>;
 pub type Vec3<T> = Vector<T, U3>;

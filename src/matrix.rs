@@ -8,7 +8,7 @@ use std::mem;
 use num::Num;
 
 use vector::*;
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 struct Matrix<T: Float, N, M>
     where N: ArrayLength<T>,
           M: ArrayLength<Vector<T, N>>,

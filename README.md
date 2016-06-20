@@ -1,3 +1,3 @@
-# Rust Linear Algebra (RLA
+# Rust Linear Algebra (RLA)
 
-## Experimental generic, n-dimensional linera algebra library for game development
+### Experimental generic, n-dimensional linera algebra library for game development

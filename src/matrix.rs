@@ -8,9 +8,11 @@ use std::mem;
 use num::Num;
 
 use vector::*;
+
 #[derive(PartialEq, Eq, Debug)]
-struct Matrix<T: Float, N, M>
-    where N: ArrayLength<T>,
+struct Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T>,
           M: ArrayLength<Vector<T, N>>,
           N::ArrayType: Copy,
           M::ArrayType: Copy
@@ -18,8 +20,9 @@ struct Matrix<T: Float, N, M>
     data: GenericArray<Vector<T, N>, M>,
 }
 
-impl<T: Float, N, M> Matrix<T, N, M>
-    where N: ArrayLength<T>,
+impl<T, N, M> Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T>,
           M: ArrayLength<Vector<T, N>>,
           N::ArrayType: Copy,
           M::ArrayType: Copy,
@@ -39,8 +42,9 @@ impl<T: Float, N, M> Matrix<T, N, M>
         }
     }
 }
-impl<T: Float, N> Matrix<T, N, N>
-    where N: ArrayLength<T> + ArrayLength<Vector<T, N>>,
+impl<T, N> Matrix<T, N, N>
+    where T: Float,
+          N: ArrayLength<T> + ArrayLength<Vector<T, N>>,
           <N as ArrayLength<T>>::ArrayType: Copy,
           <N as ArrayLength<Vector<T, N>>>::ArrayType: Copy,
           Vector<T, N>: Copy
@@ -54,8 +58,9 @@ impl<T: Float, N> Matrix<T, N, N>
     }
 }
 
-impl<T: Float, N, M> Matrix<T, N, M>
-    where N: ArrayLength<T> + ArrayLength<Vector<T, M>>,
+impl<T, N, M> Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T> + ArrayLength<Vector<T, M>>,
           M: ArrayLength<T> + ArrayLength<Vector<T, N>>,
           <N as ArrayLength<Vector<T, M>>>::ArrayType: Copy,
           <M as ArrayLength<Vector<T, N>>>::ArrayType: Copy,
@@ -75,8 +80,9 @@ impl<T: Float, N, M> Matrix<T, N, M>
     }
 }
 // funny stuff is happening here
-impl<T: Float, N, M> Matrix<T, N, M>
-    where N: ArrayLength<T> + ArrayLength<Vector<T, M>>,
+impl<T, N, M> Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T> + ArrayLength<Vector<T, M>>,
           M: ArrayLength<T> + ArrayLength<Vector<T, N>>,
           <N as ArrayLength<Vector<T, M>>>::ArrayType: Copy,
           <M as ArrayLength<Vector<T, N>>>::ArrayType: Copy,
@@ -95,8 +101,8 @@ impl<T: Float, N, M> Matrix<T, N, M>
         unsafe {
             let mut new_matrix: Matrix<T, M, N1> = mem::uninitialized();
             let other_transposed: Matrix<T, N, N1> = other.transpose();
-            for j in 0..M::to_usize() {
-                for i in 0..N1::to_usize() {
+            for j in 0..N1::to_usize() {
+                for i in 0..M::to_usize() {
                     new_matrix.data[j].data[i] = self.data[j].dot(other_transposed.data[i]);
                 }
             }
@@ -107,7 +113,6 @@ impl<T: Float, N, M> Matrix<T, N, M>
 
 #[test]
 fn mul() {
-
     use vector::*;
     let v2 = Vec2f::new(&[1., 2.]);
     let v3 = Vec3f::new(&[1., 2., 3.]);

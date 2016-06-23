@@ -5,5 +5,5 @@ extern crate generic_array;
 
 pub mod vector;
 
-//mod matrix;
+mod matrix;
 

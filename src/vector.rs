@@ -85,25 +85,25 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
           N::ArrayType: Copy,
           Vector<T, N>: Copy
 {
-    /// Builds a Vector<T, N > from a Vector<T, N-1> with an additional value.
+    /// Builds a `Vector<T, N >` from a `Vector<T, N-1>` with an additional value.
     /// # Example
     /// ```
     /// use rla::vector::*;
     /// let v = Vec3f::from_one_less(Vec2f::new(&[1.0, 2.0]), 3.0);
     /// assert!(v == Vec3f::new(&[1.0, 2.0, 3.0]));
     /// ```
-    pub fn from_one_less<>(first: Vector<T, Sub1<N>>, val: T) -> Vector<T, N>
+    pub fn from_one_less(first: Vector<T, Sub1<N>>, val: T) -> Vector<T, N>
         where N: Sub<B1>,
               <N as Sub<B1>>::Output: ArrayLength<T>,
               <<N as Sub<B1>>::Output as ArrayLength<T>>::ArrayType: Copy
     {
-        unsafe{
+        unsafe {
             let mut data: GenericArray<T, N> = mem::uninitialized();
-            for (index, val) in first.data.iter().enumerate(){
+            for (index, val) in first.data.iter().enumerate() {
                 data[index] = *val;
             }
             data[N::to_usize() - 1] = val;
-            Vector::<T, N>{ data: data }
+            Vector::<T, N> { data: data }
         }
     }
 
@@ -132,10 +132,8 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
     }
 
     pub fn dot(self, other: Self) -> T {
-        self.data
-            .iter()
-            .zip(other.data.iter())
-            .fold(T::zero(), |acc, (x, y)| acc + *x * *y)
+            Iterator::zip(self.data.into_iter(), other.data.into_iter())
+            .fold(T::zero(), |acc, (x, y)| acc + x * y)
     }
 
     pub fn length_sq(self) -> T {

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use num::{Float, Zero};
 use typenum::*;
 use generic_array::*;

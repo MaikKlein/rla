@@ -4,6 +4,8 @@ extern crate typenum;
 extern crate generic_array;
 
 pub mod vector;
+pub mod ray;
+pub mod aabb;
 
-mod matrix;
+//pub mod matrix;
 

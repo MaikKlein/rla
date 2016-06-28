@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 use vector::Vec3;
 use num::Float;
+use num::FromPrimitive;
+
+#[derive(Eq, PartialEq)]
 pub struct Aabb<T>
     where T: Float
 {
@@ -63,6 +66,58 @@ impl<T> Aabb<T>
     pub fn offset(&self, point: Vec3<T>) -> Vec3<T> {
         (point - self.min) / self.diagonale()
     }
+
+    pub fn expand(&self, distance: T) -> Self {
+        let dist_vec = Vec3::new(distance, distance, distance);
+        let min = self.min - dist_vec;
+        let max = self.max + dist_vec;
+        Aabb::new(min, max)
+    }
+
+    pub fn surface_area(&self) -> T {
+        use num::NumCast;
+        let d = self.diagonale();
+        (d.x() * d.y() + d.y() * d.z() + d.x() * d.z()) * NumCast::from(2).unwrap()
+    }
+
+    pub fn volume(&self) -> T {
+        self.diagonale().into_iter().fold(T::one(), |acc, val| acc * val)
+    }
+
+    pub fn maximum_exent(&self) -> u8 {
+        let d = self.diagonale();
+        if d.x() > d.y() && d.x() > d.z() {
+            0
+        } else if d.y() > d.z() {
+            1
+        } else {
+            2
+        }
+    }
+
+    fn bounding_sphere(&self) -> Sphere<T>
+        where T: FromPrimitive
+    {
+        let v: T = FromPrimitive::from_f32(0.5).unwrap();
+        let center: Vec3<T> = (self.min + self.max) * v;
+        Sphere::new(center, center.distance(self.max))
+    }
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub struct Sphere<T>
+    where T: Float
+{
+    center: Vec3<T>,
+    radius: T,
+}
+impl<T: Float> Sphere<T> {
+    fn new(center: Vec3<T>, radius: T) -> Self {
+        Sphere {
+            center: center,
+            radius: radius,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -72,9 +127,10 @@ mod test {
 
     #[test]
     fn union() {
-        let aabb = Aabb::new(Vec3f::new(-1., -1., -1.), Vec3f::new(1., 1., 1.));
+        let aabb = Aabb::new(Vec3f::new(-1., -1., -1.), Vec3f::new(3., 3., 3.));
         let aabb1 = Aabb::new(Vec3f::new(-2., -2., -2.), Vec3f::new(2., 2., 2.));
         let aabb2 = Aabb::union_aabb(aabb, aabb1);
+        assert!(aabb2 == Aabb::new(Vec3f::new(-2., -2., -2.), Vec3f::new(3., 3., 3.)));
     }
 
     #[test]
@@ -101,5 +157,22 @@ mod test {
         assert!(aabb.overlap(Aabb::new(Vec3f::new(0., 0., 0.), Vec3f::new(5., 5., 5.))));
         assert!(!aabb.overlap(Aabb::new(Vec3f::new(3., 3., 3.), Vec3f::new(5., 5., 5.))));
         assert!(!aabb.overlap(Aabb::new(Vec3f::new(-4., -4., -4.), Vec3f::new(-3., -3., -3.))));
+    }
+
+    #[test]
+    fn volume() {
+        let aabb = Aabb::new(Vec3f::new(0., 0., 0.), Vec3f::new(1., 1., 1.));
+        assert!(aabb.volume() == 1.);
+        let aabb1 = Aabb::new(Vec3f::new(0., 0., 0.), Vec3f::new(2., 2., 2.));
+        assert!(aabb1.volume() == 8.);
+    }
+
+    #[test]
+    fn bounding_sphere() {
+        let aabb = Aabb::new(Vec3f::new(0., 0., 0.), Vec3f::new(1., 1., 1.));
+        let sphere = aabb.bounding_sphere();
+        assert!(sphere ==
+                Sphere::new(Vec3f::new(0.5, 0.5, 0.5),
+                            Vec3f::new(0.5, 0.5, 0.5).length()));
     }
 }

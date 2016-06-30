@@ -211,7 +211,6 @@ impl<T> Matrix<T, U4, U4>
     }
 
     pub fn inverse(&self) -> Self {
-        let mut inv = self.clone();
         let coef00 = self[2][2] * self[3][3] - self[3][2] * self[2][3];
         let coef02 = self[1][2] * self[3][3] - self[3][2] * self[1][3];
         let coef03 = self[1][2] * self[2][3] - self[2][2] * self[1][3];
@@ -264,7 +263,7 @@ impl<T> Matrix<T, U4, U4>
         let dot1 = (dot0.x() + dot0.y()) + (dot0.z() + dot0.w());
 
         let one_over_det = T::one() / dot1;
-        inv * one_over_det
+        inverse * one_over_det
     }
 }
 

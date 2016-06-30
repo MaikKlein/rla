@@ -2,7 +2,7 @@
 use num::{Float, Zero, NumCast};
 use typenum::*;
 use generic_array::*;
-use std::ops::{Add, Sub, Mul, Div, Neg};
+use std::ops::{Add, Sub, Mul, Div, Neg, Index, IndexMut};
 use std::mem;
 
 pub type Vec4<T> = Vector<T, U4>;
@@ -97,7 +97,7 @@ impl<T> Vector<T, U3>
     where T: Float + Zero,
           Vector<T, U3>: Copy
 {
-    fn cross(self, other: Self) -> Self {
+    pub fn cross(self, other: Self) -> Self {
         Self::new(self.y() * other.z() - self.z() * other.y(),
                   self.z() * other.x() - self.x() * other.z(),
                   self.x() * other.y() - self.y() * other.x())
@@ -262,6 +262,26 @@ impl<T, N> Neg for Vector<T, N>
     }
 }
 
+impl<T, N> Index<usize> for Vector<T, N>
+    where T: Float,
+          N: ArrayLength<T>,
+          N::ArrayType: Copy
+{
+    type Output = T;
+
+    fn index(&self, idx: usize) -> &T {
+        &self.data[idx]
+    }
+}
+impl<T, N> IndexMut<usize> for Vector<T, N>
+    where T: Float,
+          N: ArrayLength<T>,
+          N::ArrayType: Copy
+{
+    fn index_mut(&mut self, idx: usize) -> &mut T {
+        &mut self.data[idx]
+    }
+}
 use std::ops::Deref;
 
 impl<T, N> Deref for Vector<T, N>

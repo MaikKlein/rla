@@ -61,6 +61,30 @@ impl<T> Transform<T>
         let new_p = self.m.mul_v(p.extend(T::one()));
         new_p.truncate() / new_p.w()
     }
+
+    pub fn look_at(pos: Vec3<T>, target: Vec3<T>, up: Vec3<T>) -> Self {
+        let z = (pos - target).normalize().unwrap();
+        let x = up.cross(z).normalize().unwrap();
+        let y = z.cross(x);
+
+        let m = Mat4x4::<T>::new(&[
+            x.extend(T::zero()),
+            x.extend(T::zero()),
+            x.extend(T::zero()),
+            Vec4::new(T::one(), T:: zero(),T:: zero(),T:: zero())
+        ]);
+        let m1 = Mat4x4::<T>::new(&[
+            x.extend(T::zero()),
+            x.extend(T::zero()),
+            x.extend(T::zero()),
+            Vec4::new(T::one(), T:: zero(),T:: zero(),T:: zero())
+        ]);
+
+        Transform {
+            m: m,
+            inverse: m1,
+        }
+    }
 }
 
 #[cfg(test)]

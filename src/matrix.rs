@@ -3,11 +3,12 @@ use num::Float;
 use typenum::*;
 use generic_array::*;
 use std::ops;
+use std::ops::{Index, IndexMut, Mul};
 use std::mem;
 
 use vector::*;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Matrix<T, N, M>
     where T: Float,
           N: ArrayLength<T>,
@@ -18,6 +19,23 @@ pub struct Matrix<T, N, M>
     data: GenericArray<Vector<T, N>, M>,
 }
 
+impl<T, N, M> Mul<T> for Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T>,
+          M: ArrayLength<Vector<T, N>>,
+          N::ArrayType: Copy,
+          M::ArrayType: Copy,
+          Vector<T, N>: Copy
+{
+    type Output = Matrix<T, N, M>;
+    fn mul(self, scalar: T) -> Self::Output {
+        let mut m = Self::zero();
+        for (index, new_val) in self.data.into_iter().map(|v| v * scalar).enumerate() {
+            m.data[index] = new_val;
+        }
+        m
+    }
+}
 impl<T, N, M> Matrix<T, N, M>
     where T: Float,
           N: ArrayLength<T>,
@@ -26,11 +44,11 @@ impl<T, N, M> Matrix<T, N, M>
           M::ArrayType: Copy,
           Vector<T, N>: Copy
 {
-    fn new(slice: &[Vector<T, N>]) -> Matrix<T, N, M> {
+    pub fn new(slice: &[Vector<T, N>]) -> Matrix<T, N, M> {
         Matrix::<T, N, M> { data: GenericArray::from_slice(slice) }
     }
 
-    fn zero() -> Matrix<T, N, M> {
+    pub fn zero() -> Matrix<T, N, M> {
         unsafe {
             let mut mat: Matrix<T, N, M> = mem::uninitialized();
             for j in 0..M::to_usize() {
@@ -117,7 +135,32 @@ impl<T, N, M> Matrix<T, N, M>
         }
     }
 }
-use asprim::AsPrim;
+
+impl<T, N, M> Index<usize> for Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T>,
+          M: ArrayLength<Vector<T, N>>,
+          N::ArrayType: Copy,
+          M::ArrayType: Copy
+{
+    type Output = Vector<T, N>;
+
+    fn index(&self, idx: usize) -> &Vector<T, N> {
+        &self.data[idx]
+    }
+}
+impl<T, N, M> IndexMut<usize> for Matrix<T, N, M>
+    where T: Float,
+          N: ArrayLength<T>,
+          M: ArrayLength<Vector<T, N>>,
+          N::ArrayType: Copy,
+          M::ArrayType: Copy
+{
+    fn index_mut(&mut self, idx: usize) -> &mut Vector<T, N> {
+        &mut self.data[idx]
+    }
+}
+
 impl<T> Matrix<T, U4, U4>
     where T: Float
 {
@@ -141,10 +184,10 @@ impl<T> Matrix<T, U4, U4>
     pub fn rotation_x(angle: T) -> Self {
         let s = angle.sin();
         let c = angle.cos();
-        Self::new(&[Vec4::<T>::new(T::one(),  T::zero(), T::zero(), T::zero()),
-                    Vec4::<T>::new(T::zero(), c,         -s,        T::zero()),
-                    Vec4::<T>::new(T::zero(), s,          c,        T::zero()),
-                    Vec4::<T>::new(T::zero(), T::zero(), T::zero(), T::one())])
+        Self::new(&[Vec4::<T>::new(T::one(),  T::zero(),  T::zero(), T::zero()),
+                    Vec4::<T>::new(T::zero(), c,         -s,         T::zero()),
+                    Vec4::<T>::new(T::zero(), s,          c,         T::zero()),
+                    Vec4::<T>::new(T::zero(), T::zero(),  T::zero(), T::one())])
     }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -165,6 +208,63 @@ impl<T> Matrix<T, U4, U4>
                     Vec4::<T>::new(s,         c,         T::zero(), T::zero()),
                     Vec4::<T>::new(T::zero(), T::zero(), T::one(),  T::zero()),
                     Vec4::<T>::new(T::zero(), T::zero(), T::zero(), T::one())])
+    }
+
+    pub fn inverse(&self) -> Self {
+        let mut inv = self.clone();
+        let coef00 = self[2][2] * self[3][3] - self[3][2] * self[2][3];
+        let coef02 = self[1][2] * self[3][3] - self[3][2] * self[1][3];
+        let coef03 = self[1][2] * self[2][3] - self[2][2] * self[1][3];
+
+        let coef04 = self[2][1] * self[3][3] - self[3][1] * self[2][3];
+        let coef06 = self[1][1] * self[3][3] - self[3][1] * self[1][3];
+        let coef07 = self[1][1] * self[2][3] - self[2][1] * self[1][3];
+
+        let coef08 = self[2][1] * self[3][2] - self[3][1] * self[2][2];
+        let coef10 = self[1][1] * self[3][2] - self[3][1] * self[1][2];
+        let coef11 = self[1][1] * self[2][2] - self[2][1] * self[1][2];
+
+        let coef12 = self[2][0] * self[3][3] - self[3][0] * self[2][3];
+        let coef14 = self[1][0] * self[3][3] - self[3][0] * self[1][3];
+        let coef15 = self[1][0] * self[2][3] - self[2][0] * self[1][3];
+
+        let coef16 = self[2][0] * self[3][2] - self[3][0] * self[2][2];
+        let coef18 = self[1][0] * self[3][2] - self[3][0] * self[1][2];
+        let coef19 = self[1][0] * self[2][2] - self[2][0] * self[1][2];
+
+        let coef20 = self[2][0] * self[3][1] - self[3][0] * self[2][1];
+        let coef22 = self[1][0] * self[3][1] - self[3][0] * self[1][1];
+        let coef23 = self[1][0] * self[2][1] - self[2][0] * self[1][1];
+
+        let fac0 = Vec4::new(coef00, coef00, coef02, coef03);
+        let fac1 = Vec4::new(coef04, coef04, coef06, coef07);
+        let fac2 = Vec4::new(coef08, coef08, coef10, coef11);
+        let fac3 = Vec4::new(coef12, coef12, coef14, coef15);
+        let fac4 = Vec4::new(coef16, coef16, coef18, coef19);
+        let fac5 = Vec4::new(coef20, coef20, coef22, coef23);
+
+        let vec0 = Vec4::new(self[1][0], self[0][0], self[0][0], self[0][0]);
+        let vec1 = Vec4::new(self[1][1], self[0][1], self[0][1], self[0][1]);
+        let vec2 = Vec4::new(self[1][2], self[0][2], self[0][2], self[0][2]);
+        let vec3 = Vec4::new(self[1][3], self[0][3], self[0][3], self[0][3]);
+
+        let inv0 = vec1 * fac0 - vec2 * fac1 + vec3 * fac2;
+        let inv1 = vec0 * fac0 - vec2 * fac3 + vec3 * fac4;
+        let inv2 = vec0 * fac1 - vec1 * fac3 + vec3 * fac5;
+        let inv3 = vec0 * fac2 - vec1 * fac4 + vec2 * fac5;
+
+        let sign_a = Vec4::new(T::one(), -T::one(), T::one(), -T::one());
+        let sign_b = Vec4::new(-T::one(), T::one(), -T::one(), T::one());
+
+        let inverse = Self::new(&[inv0 * sign_a, inv1 * sign_b, inv2 * sign_a, inv3 * sign_b]);
+
+        let row0 = Vec4::new(inverse[0][0], inverse[1][0], inverse[2][0], inverse[3][0]);
+
+        let dot0 = self[0] * row0;
+        let dot1 = (dot0.x() + dot0.y()) + (dot0.z() + dot0.w());
+
+        let one_over_det = T::one() / dot1;
+        inv * one_over_det
     }
 }
 

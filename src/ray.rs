@@ -2,28 +2,38 @@
 
 use vector::Vec3;
 use num::Float;
-struct Ray<T>
+pub struct Ray<T>
     where T: Float
 {
-    origin: Vec3<T>,
-    direction: Vec3<T>,
+    pub origin: Vec3<T>,
+    pub direction: Vec3<T>,
+    pub max_time: T
 }
 
 impl<T> Ray<T>
     where T: Float
 {
-    fn new(o: Vec3<T>, d: Vec3<T>) -> Self {
+    pub fn new(o: Vec3<T>, d: Vec3<T>, max_time: T) -> Self {
         Ray {
             origin: o,
             direction: d,
+            max_time: max_time
         }
+    }
+    pub fn from_start_end(start: Vec3<T>, end: Vec3<T>) -> Self {
+        let dir = end - start;
+        let max_time = dir.length();
+        let dir_normal = dir.normalize().expect("Should not be zero");
+        Ray::new(start, dir_normal, max_time)
     }
 }
 
-struct RayIntersection<T>
+
+pub struct RayHit<T>
     where T: Float
 {
-    max: T,
-    min: T,
     ray: Ray<T>,
+    time: T
 }
+
+

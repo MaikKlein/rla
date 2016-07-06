@@ -9,4 +9,7 @@ pub mod ray;
 pub mod aabb;
 pub mod matrix;
 pub mod transform;
+pub mod quaternion;
+pub mod unit;
+pub mod shapes;
 

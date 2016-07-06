@@ -2,6 +2,7 @@
 use matrix::*;
 use num::Float;
 use vector::*;
+use ray::*;
 pub struct Transform<T>
     where T: Float
 {
@@ -61,28 +62,31 @@ impl<T> Transform<T>
         let new_p = self.m.mul_v(p.extend(T::one()));
         new_p.truncate() / new_p.w()
     }
+    pub fn mul_ray(&self, ray: Ray<T>) -> Ray<T> {
+        let new_origin = self.m.mul_v(ray.origin.extend(T::one())).truncate();
+        let new_direction = self.m
+            .mul_v(ray.direction.extend(T::zero()))
+            .truncate()
+            .normalize()
+            .expect("Not null");
+        Ray::new(new_origin, new_direction, ray.max_time)
+    }
 
     pub fn look_at(pos: Vec3<T>, target: Vec3<T>, up: Vec3<T>) -> Self {
         let z = (pos - target).normalize().unwrap();
         let x = up.cross(z).normalize().unwrap();
         let y = z.cross(x);
 
-        let m = Mat4x4::<T>::new(&[
-            x.extend(T::zero()),
-            x.extend(T::zero()),
-            x.extend(T::zero()),
-            Vec4::new(T::one(), T:: zero(),T:: zero(),T:: zero())
-        ]);
-        let m1 = Mat4x4::<T>::new(&[
-            x.extend(T::zero()),
-            x.extend(T::zero()),
-            x.extend(T::zero()),
-            Vec4::new(T::one(), T:: zero(),T:: zero(),T:: zero())
-        ]);
+        let m = Mat4x4::<T>::new(&[x.extend(T::zero()),
+                                   y.extend(T::zero()),
+                                   z.extend(T::zero()),
+                                   Vec4::new(T::one(), T::zero(), T::zero(), T::zero())]);
+
+        let m_inv = m.inverse();
 
         Transform {
             m: m,
-            inverse: m1,
+            inverse: m_inv,
         }
     }
 }

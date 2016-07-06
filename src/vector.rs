@@ -5,6 +5,8 @@ use generic_array::*;
 use std::ops::{Add, Sub, Mul, Div, Neg, Index, IndexMut};
 use std::mem;
 
+pub type Vector<T, N> = CoreVector<T, N, VectorType>;
+
 pub type Vec4<T> = Vector<T, U4>;
 pub type Vec3<T> = Vector<T, U3>;
 pub type Vec2<T> = Vector<T, U2>;
@@ -13,34 +15,62 @@ pub type Vec4f = Vec4<f32>;
 pub type Vec3f = Vec3<f32>;
 pub type Vec2f = Vec2<f32>;
 
+pub type Normal<T, N> = CoreVector<T, N, NormalType>;
+
+pub type Normal3<T> = Normal<T, U3>;
+pub type Normal3f = Normal3<f32>;
+//
+pub type Point<T, N> = CoreVector<T, N, PointType>;
+
+pub type Point3<T> = Point<T, U3>;
+pub type Point2<T> = Point<T, U2>;
+//
+// pub type Point3f = Point3<f32>;
+// pub type Point2f = Point2<f32>;
+
+#[derive(PartialEq, Eq, Copy, Debug, Clone)]
+pub struct VectorType;
+
+#[derive(PartialEq, Eq, Copy, Debug, Clone)]
+pub struct PointType;
+
+#[derive(PartialEq, Eq, Copy, Debug, Clone)]
+pub struct NormalType;
+
+use std::marker;
 #[derive(PartialEq, Eq, Copy, Debug)]
-pub struct Vector<T, N>
+pub struct CoreVector<T, N, Type>
     where N::ArrayType: Copy,
           T: Float,
           N: ArrayLength<T>
 {
     pub data: GenericArray<T, N>,
+    _type: marker::PhantomData<Type>,
 }
 
-impl<T, N> Clone for Vector<T, N>
+impl<T, N, Type> Clone for CoreVector<T, N, Type>
     where N: ArrayLength<T>,
           N::ArrayType: Copy,
           T: Float
 {
     fn clone(&self) -> Self {
-        Vector::<T, N> { data: self.data }
+        CoreVector {
+            data: self.data,
+            _type: marker::PhantomData,
+        }
     }
 }
 
 macro_rules! as_expr { ($e:expr) => {$e} }
 macro_rules! impl_op_vec{
     ($trait_name: ident, $fn_name: ident, $op: tt) => {
-        impl<T, N> $trait_name for Vector<T, N>
+        impl<T, N, Type> $trait_name for CoreVector<T, N, Type>
             where N::ArrayType: Copy,
                   N: ArrayLength<T>,
-                  T: Float
+                  T: Float,
+                  CoreVector<T, N, Type>: Copy
         {
-            type Output = Vector<T, N>;
+            type Output = CoreVector<T, N, Type>;
             fn $fn_name(self, other: Self) -> Self::Output {
                 unsafe {
                     let mut new_data: GenericArray<T, N> = mem::uninitialized();
@@ -51,27 +81,27 @@ macro_rules! impl_op_vec{
                     for (index, val) in iter.enumerate() {
                         new_data[index] = val;
                     }
-                    Vector::<T, N> { data: new_data }
+                    Self::from_slice(&new_data)
                 }
             }
         }
     }
-}
+ }
 
 impl_op_vec!(Sub, sub, -);
 impl_op_vec!(Add, add, +);
 impl_op_vec!(Mul, mul, *);
 impl_op_vec!(Div, div, /);
 
-
 macro_rules! impl_op_vec_un{
     ($trait_name: ident, $fn_name: ident, $op: tt) => {
-        impl<T, N> $trait_name<T> for Vector<T, N>
+        impl<T, N, Type> $trait_name<T> for CoreVector<T, N, Type>
             where N::ArrayType: Copy,
                   N: ArrayLength<T>,
-                  T: Float
+                  T: Float,
+                  CoreVector<T, N, Type>: Copy
         {
-            type Output = Vector<T, N>;
+            type Output = CoreVector<T, N, Type>;
             fn $fn_name(self, other: T) -> Self::Output {
                 unsafe {
                     let mut new_data: GenericArray<T, N> = mem::uninitialized();
@@ -81,21 +111,21 @@ macro_rules! impl_op_vec_un{
                     for (index, val) in iter.enumerate() {
                         new_data[index] = val;
                     }
-                    Vector::<T, N> { data: new_data }
+                    Self::from_slice(&new_data)
                 }
             }
         }
     }
-}
+ }
 
 impl_op_vec_un!(Mul, mul, *);
 impl_op_vec_un!(Add, add, +);
 impl_op_vec_un!(Sub, sub, -);
 impl_op_vec_un!(Div, div, /);
 
-impl<T> Vector<T, U3>
+impl<T, Type> CoreVector<T, U3, Type>
     where T: Float + Zero,
-          Vector<T, U3>: Copy
+          CoreVector<T, U3, Type>: Copy
 {
     pub fn cross(self, other: Self) -> Self {
         Self::new(self.y() * other.z() - self.z() * other.y(),
@@ -104,19 +134,20 @@ impl<T> Vector<T, U3>
     }
 }
 
-impl<T, N: ArrayLength<T>> Vector<T, N>
+impl<T, N, Type> CoreVector<T, N, Type>
     where T: Float + Zero,
+          N: ArrayLength<T>,
           N::ArrayType: Copy,
-          Vector<T, N>: Copy
+          CoreVector<T, N, Type>: Copy
 {
-    /// Builds a `Vector<T, N >` from a `Vector<T, N-1>` with an additional value.
+    /// Builds a `CoreVector<T, N >` from a `CoreVector<T, N-1>` with an additional value.
     /// # Example
     /// ```
     /// use rla::vector::*;
     /// let v = Vec3f::from_one_less(Vec2f::new(1.0, 2.0), 3.0);
     /// assert!(v == Vec3f::new(1.0, 2.0, 3.0));
     /// ```
-    pub fn from_one_less(first: Vector<T, Sub1<N>>, val: T) -> Vector<T, N>
+    pub fn from_one_less(first: CoreVector<T, Sub1<N>, Type>, val: T) -> Self
         where N: Sub<B1>,
               <N as Sub<B1>>::Output: ArrayLength<T>,
               <<N as Sub<B1>>::Output as ArrayLength<T>>::ArrayType: Copy
@@ -127,21 +158,23 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
                 data[index] = *val;
             }
             data[N::to_usize() - 1] = val;
-            Vector::<T, N> { data: data }
+            Self::from_slice(&data)
         }
     }
 
-    pub fn from_slice(slice: &[T]) -> Vector<T, N> {
-        Vector::<T, N> { data: GenericArray::from_slice(slice) }
+    pub fn from_slice(slice: &[T]) -> CoreVector<T, N, Type> {
+        CoreVector {
+            data: GenericArray::from_slice(slice),
+            _type: marker::PhantomData,
+        }
     }
-
-    pub fn zero() -> Vector<T, N> {
+    pub fn zero() -> Self {
         unsafe {
             let mut data: GenericArray<T, N> = mem::uninitialized();
             for val in data.iter_mut() {
                 *val = T::zero();
             }
-            Vector::<T, N> { data: data }
+            Self::from_slice(&data)
         }
     }
 
@@ -196,15 +229,17 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
         self.distance_sq(other).sqrt()
     }
 
-    pub fn map<F, B>(self, f: F) -> Vector<B, N>
+    pub fn map<F, B>(self, f: F) -> CoreVector<B, N, Type>
         where F: Fn(T) -> B,
               N: ArrayLength<B>,
               B: Float,
               N: Copy,
-              <N as ArrayLength<B>>::ArrayType: Copy
+              <N as ArrayLength<B>>::ArrayType: Copy,
+              CoreVector<B, N, Type>: Copy
     {
         self.into_iter().map(f).collect()
     }
+
     pub fn min(self, other: Self) -> Self {
         Iterator::zip(self.data.into_iter(), other.data.into_iter())
             .map(|(a, b)| a.min(b))
@@ -224,13 +259,14 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
     pub fn dim(&self) -> usize {
         N::to_usize()
     }
-    pub fn extend(self, val: T) -> Vector<T, Add1<N>>
+
+    pub fn extend(self, val: T) -> CoreVector<T, Add1<N>, Type>
         where N: Add<B1>,
-              <N as Add<B1>>::Output: ArrayLength<T>,
-              <<N as Add<B1>>::Output as ArrayLength<T>>::ArrayType: Copy,
-              Vector<T, Add1<N>> : Copy
+                 <N as Add<B1>>::Output: ArrayLength<T>,
+                 <<N as Add<B1>>::Output as ArrayLength<T>>::ArrayType: Copy,
+                 CoreVector<T, Add1<N>, Type> : Copy
     {
-        let mut v = Vector::<T, Add1<N>>::zero();
+        let mut v = CoreVector::zero();
         for (index, self_val) in self.into_iter().enumerate() {
             v.data[index] = self_val;
         }
@@ -238,31 +274,33 @@ impl<T, N: ArrayLength<T>> Vector<T, N>
         v.data[last_index] = val;
         v
     }
-    pub fn truncate(self) -> Vector<T, Sub1<N>>
+
+    pub fn truncate(self) -> CoreVector<T, Sub1<N>, Type>
         where N: Sub<B1>,
               <N as Sub<B1>>::Output: ArrayLength<T>,
               <<N as Sub<B1>>::Output as ArrayLength<T>>::ArrayType: Copy,
-              Vector<T, Sub1<N>> : Copy
+              CoreVector<T, Sub1<N>, Type> : Copy
     {
-        let mut v = Vector::<T, Sub1<N>>::zero();
+        let mut v = CoreVector::zero();
         for (index, val) in self.into_iter().enumerate() {
             v.data[index] = val;
         }
         v
     }
 }
-impl<T, N> Neg for Vector<T, N>
+impl<T, N, Type> Neg for CoreVector<T, N, Type>
     where T: Float,
           N: ArrayLength<T>,
-          N::ArrayType: Copy
+          N::ArrayType: Copy,
+          CoreVector<T, N, Type>: Copy
 {
-    type Output = Vector<T, N>;
+    type Output = CoreVector<T, N, Type>;
     fn neg(self) -> Self {
         self * -T::one()
     }
 }
 
-impl<T, N> Index<usize> for Vector<T, N>
+impl<T, N, Type> Index<usize> for CoreVector<T, N, Type>
     where T: Float,
           N: ArrayLength<T>,
           N::ArrayType: Copy
@@ -273,7 +311,7 @@ impl<T, N> Index<usize> for Vector<T, N>
         &self.data[idx]
     }
 }
-impl<T, N> IndexMut<usize> for Vector<T, N>
+impl<T, N, Type> IndexMut<usize> for CoreVector<T, N, Type>
     where T: Float,
           N: ArrayLength<T>,
           N::ArrayType: Copy
@@ -284,7 +322,7 @@ impl<T, N> IndexMut<usize> for Vector<T, N>
 }
 use std::ops::Deref;
 
-impl<T, N> Deref for Vector<T, N>
+impl<T, N, Type> Deref for CoreVector<T, N, Type>
     where T: Float,
           N: ArrayLength<T>,
           N::ArrayType: Copy
@@ -295,12 +333,11 @@ impl<T, N> Deref for Vector<T, N>
     }
 }
 use std::iter::FromIterator;
-
-impl<T, N> FromIterator<T> for Vector<T, N>
+impl<T, N, Type> FromIterator<T> for CoreVector<T, N, Type>
     where T: Float,
           N: ArrayLength<T>,
           N::ArrayType: Copy,
-          Vector<T, N>: Copy
+          CoreVector<T, N, Type>: Copy
 {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         unsafe {
@@ -310,15 +347,15 @@ impl<T, N> FromIterator<T> for Vector<T, N>
                 data[index] = val;
                 index += 1;
             }
-            Vector::from_slice(&data)
+            CoreVector::from_slice(&data)
         }
     }
 }
 
 macro_rules! impl_vec_accessor{
     ($dim: ident, $(( $access: ident, $index: expr ) ),*) => {
-        impl<T> Vector<T, $dim>
-            where T: Float
+        impl<T, Type> CoreVector<T, $dim, Type>
+            where T: Float,
         {
             $(
                 pub fn $access(&self) -> T {
@@ -327,10 +364,10 @@ macro_rules! impl_vec_accessor{
             )*
         }
     };
-}
+ }
 macro_rules! impl_vec_accessor_mut{
     ($dim: ident, $(( $access: ident, $index: expr ) ),*) => {
-        impl<T> Vector<T, $dim>
+        impl<T, Type> CoreVector<T, $dim, Type>
             where T: Float
         {
             $(
@@ -340,7 +377,7 @@ macro_rules! impl_vec_accessor_mut{
             )*
         }
     };
-}
+ }
 
 impl_vec_accessor_mut!(U2, (x_m, 0), (y_m, 1));
 impl_vec_accessor_mut!(U3, (x_m, 0), (y_m, 1), (z_m, 2));
@@ -352,72 +389,72 @@ impl_vec_accessor!(U4, (x, 0), (y, 1), (z, 2), (w, 3));
 
 macro_rules! impl_vec_new{
     ($dim: ident, $( $x: ident),*) => {
-        impl<T> Vector<T, $dim>
+        impl<T, Type> CoreVector<T, $dim, Type>
             where T: Float + Zero,
-                  Vector<T, $dim>: Copy
+                  CoreVector<T, $dim, Type>: Copy
         {
             pub fn new($($x : T), *) -> Self {
                 Self::from_slice(&[$($x),*])
             }
         }
     };
-}
+ }
 
 impl_vec_new!(U2, x, y);
 impl_vec_new!(U3, x, y, z);
 impl_vec_new!(U4, x, y, z, w);
-
 #[cfg(test)]
 mod test {
-    use vector::*;
-    #[test]
-    fn test_reflection() {
-        let v1 = Vec2f::from_slice(&[1., -1.]);
-        let v2 = Vec2f::from_slice(&[1., 1.]);
-        let n = Vec2f::from_slice(&[0., 1.]);
-        assert!(v1.reflect_normal(n) == v2);
-    }
-    #[test]
-    fn mul_v() {
-        let v = Vec2f::from_slice(&[1.0, 2.0]);
-        assert!(v + v == v * 2.0);
-    }
+   use vector::*;
+   #[test]
+   fn test_reflection() {
+       let v1 = Vec2f::from_slice(&[1., -1.]);
+       let v2 = Vec2f::from_slice(&[1., 1.]);
+       let n = Vec2f::from_slice(&[0., 1.]);
+       assert!(v1.reflect_normal(n) == v2);
+   }
+   #[test]
+   fn mul_v() {
+       let v = Vec2f::from_slice(&[1.0, 2.0]);
+       assert!(v + v == v * 2.0);
+   }
 
-    #[test]
-    fn add_vector() {
-        // let v1 = Vec2f::from_slice(&[1., -1.]);
-        // let v2 = Vec2f::from_slice(&[1., 1.]);
-        // let v3 = Vec2f::new(1., 2.);
-        // let n = Vec2f::from_slice(&[0., 1.]);
-        // assert!(v1 + n * 2. == v2);
-    }
+   #[test]
+   fn add_vector() {
+       // let v1 = Vec2f::from_slice(&[1., -1.]);
+       // let v2 = Vec2f::from_slice(&[1., 1.]);
+       // let v3 = Vec2f::new(1., 2.);
+       // let n = Vec2f::from_slice(&[0., 1.]);
+       // assert!(v1 + n * 2. == v2);
+   }
 
-    #[test]
-    fn lerp_vector() {
-        let v1 = Vec2f::new(-1., -1.);
-        let v2 = Vec2f::new(1., 1.);
-        assert!(Vec2f::lerp(v1, v2, 0.5) == Vec2f::new(0., 0.));
-        assert!(Vec2f::lerp(v1, v2, 0.0) == v1);
-        assert!(Vec2f::lerp(v1, v2, 1.0) == v2);
-    }
-    #[test]
-    fn distance_vec() {
-        let v1 = Vec2f::from_slice(&[0.0, 2.0]);
-        let v2 = Vec2f::from_slice(&[0.0, 10.0]);
-        assert!(v1.distance(v2) == 8.0);
-        assert!(v1.length_sq() == 4.0);
-        assert!(v1.length() == 2.0);
-        assert!(v2.normalize().unwrap() == Vec2f::from_slice(&[0.0, 1.0]));
-        let n = Vec2f::from_slice(&[0.0, 1.0]);
-        let reflect_v1 = Vec2f::from_slice(&[1.0, -1.0]);
-        assert!(reflect_v1.reflect_normal(n) == Vec2f::from_slice(&[1.0, 1.0]));
-        Vec3f::from_one_less(v1, 1.0);
-    }
+   #[test]
+   fn lerp_vector() {
+       let v1 = Vec2f::new(-1., -1.);
+       let v2 = Vec2f::new(1., 1.);
+       assert!(Vec2f::lerp(v1, v2, 0.5) == Vec2f::new(0., 0.));
+       assert!(Vec2f::lerp(v1, v2, 0.0) == v1);
+       assert!(Vec2f::lerp(v1, v2, 1.0) == v2);
+   }
 
-    #[test]
-    fn extend() {
-        let v = Vec2f::new(1., 1.);
-        let v2 = v.extend(1.);
-        assert!(v2 == Vec3f::new( 1., 1., 1. ));
-    }
+   #[test]
+   fn distance_vec() {
+       let v1 = Vec2f::from_slice(&[0.0, 2.0]);
+       let v2 = Vec2f::from_slice(&[0.0, 10.0]);
+       assert!(v1.distance(v2) == 8.0);
+       assert!(v1.length_sq() == 4.0);
+       assert!(v1.length() == 2.0);
+       assert!(v2.normalize().unwrap() == Vec2f::from_slice(&[0.0, 1.0]));
+       let n = Vec2f::from_slice(&[0.0, 1.0]);
+       let reflect_v1 = Vec2f::from_slice(&[1.0, -1.0]);
+       assert!(reflect_v1.reflect_normal(n) == Vec2f::from_slice(&[1.0, 1.0]));
+       Vec3f::from_one_less(v1, 1.0);
+   }
+
+   #[test]
+   fn extend() {
+       let v = Vec2f::new(1., 1.);
+       let v2 = v.extend(1.);
+       assert!(v2 == Vec3f::new( 1., 1., 1. ));
+   }
 }

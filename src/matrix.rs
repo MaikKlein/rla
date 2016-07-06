@@ -280,6 +280,12 @@ mod test {
         let v2 = m.mul_v(v);
         println!("{:?}", v2);
     }
+    #[test]
+    fn inverse(){
+        let identity = Mat4x4f::rotation_y(10.0);
+        let m = identity.mul(&identity.inverse());
+        println!("{:?}", m);
+    }
 }
 #[test]
 fn mul() {

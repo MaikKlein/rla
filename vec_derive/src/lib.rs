@@ -103,6 +103,14 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
                 }
             }
 
+            #[inline]
+            pub fn as_raw_slice(&self) -> &[T]{
+                let ptr = &self.#first_field.x as *const T;
+                unsafe {
+                    ::std::slice::from_raw_parts(ptr, #dim * #dim)
+                }
+            }
+
             pub unsafe fn get_unchecked(&self, idx: usize) -> &#ty{
                 let ptr = &self.#first_field as *const #ty;
                 &*ptr.offset(idx as isize)

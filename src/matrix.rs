@@ -89,7 +89,6 @@ impl<T> Mat4<T>
     }
 
     pub fn look_at(eye: Vec3<T>, center: Vec3<T>, up: Vec3<T>) -> Self {
-
         let z = Vec3::normalize(eye - center).unwrap();
         let x = Vec3::cross(up, z).normalize().unwrap();
         let y = Vec3::cross(z, x).normalize().unwrap();

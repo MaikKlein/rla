@@ -27,7 +27,8 @@ fn main() {
     //let m1 = Mat2::from_rows(Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0));
     //let m2 = Mat2::from_rows(Vec2::new(1.0, 0.0), Vec2::new(0.0, 1.0));
     //let v1 = Mat2::rot(std::f32::consts::PI / 4.0) * &v;
-    println!("{:?}", Mat4::scale(Vec3::new(1.0, 2.0, 3.0)));
+    
+    println!("{:?}", Mat4::scale(Vec3::new(1.0, 2.0, 3.0)).as_raw_slice());
     //    let length = 100000;
     //    let v1: Vec<_> = (0 .. length).map(|i| i as f32).map(|i| Vec4::new(i, i, i, i)).collect();
     //    let v2: Vec<_> = (0 .. length).map(|i| i as f32).map(|i| Vec4T{v: [i, i, i, i]}).collect();

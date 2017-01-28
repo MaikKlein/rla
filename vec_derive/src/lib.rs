@@ -172,7 +172,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
        impl<'a, T> ::std::ops::Mul<&'a #ident<T>> for #ident<T>
            where T: Float + ::std::ops::AddAssign{
            type Output = #ident<T>;
-           fn mul(self, other: &#ident<T>) -> Self::Output {
+           fn mul(self, other: &'a #ident<T>) -> Self::Output {
                let mut r: Self = unsafe{ ::std::mem::zeroed()};
                unsafe{
                  #unrolled_mul

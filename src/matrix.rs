@@ -37,9 +37,9 @@ impl<T> Mat2<T>
 }
 
 impl<T> Mat4<T>
-    where T: Float
+    where T: Float + ::std::ops::AddAssign + ::std::fmt::Debug
 {
-    pub fn scale(v: Vec3<T>) -> Self{
+    pub fn scale(v: Vec3<T>) -> Self {
         let mut m = Mat4::identity();
         m[0][0] = v.x;
         m[1][1] = v.y;
@@ -89,7 +89,7 @@ impl<T> Mat4<T>
     }
 
     pub fn look_at(eye: Vec3<T>, center: Vec3<T>, up: Vec3<T>) -> Self {
-        let z = Vec3::normalize(eye - center).unwrap();
+        let z = Vec3::normalize(center - eye).unwrap();
         let x = Vec3::cross(up, z).normalize().unwrap();
         let y = Vec3::cross(z, x).normalize().unwrap();
         Mat4::from_rows(x.extend(-x.dot(eye)),

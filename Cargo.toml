@@ -1,5 +1,5 @@
 [package]
-name = "soa"
+name = "rla"
 version = "0.1.0"
 authors = ["maik klein <maikklein@googlemail.com>"]
 
@@ -9,3 +9,7 @@ vec_derive = { path = "vec_derive"}
 num = "*"
 syn = "0.10.6"
 quote = "0.3.10"
+generic-array = "0.6.0"
+
+[profile.release]
+debug = true

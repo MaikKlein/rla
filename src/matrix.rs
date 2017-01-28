@@ -48,9 +48,9 @@ impl<T> Mat4<T>
     }
 
     pub fn translate(v: Vec3<T>) -> Self {
-        Mat4::from_rows(Vec4::new(T::zero(), T::zero(), T::zero(), v.x),
-                        Vec4::new(T::zero(), T::zero(), T::zero(), v.y),
-                        Vec4::new(T::zero(), T::zero(), T::zero(), v.z),
+        Mat4::from_rows(Vec4::new(T::one(), T::zero(), T::zero(), v.x),
+                        Vec4::new(T::zero(), T::one(), T::zero(), v.y),
+                        Vec4::new(T::zero(), T::zero(), T::one(), v.z),
                         Vec4::new(T::zero(), T::zero(), T::zero(), T::one()))
     }
 

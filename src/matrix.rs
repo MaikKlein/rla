@@ -94,7 +94,7 @@ impl<T> Mat4<T>
         let y = Vec3::cross(x, z).normalize().unwrap();
         Mat4::from_rows(x.extend(-x.dot(eye)),
                         y.extend(-y.dot(eye)),
-                        z.extend(-z.dot(eye) * -T::one()),
+                        Vec4::new(-z.x, -z.y, -z.z, z.dot(eye)),
                         Vec4::new(T::zero(), T::zero(), T::zero(), T::one()))
     }
 

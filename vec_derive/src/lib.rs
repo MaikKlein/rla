@@ -17,15 +17,15 @@ pub fn mat_derive(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     let ast = syn::parse_macro_input(&s).unwrap();
     let gen = gen_mat_derive(&ast);
-    //let mut out = String::new();
-    //let config =
-    //    config::Config { write_mode: config::WriteMode::Plain, ..config::Config::default() };
-    //let fmt_r = format_input::<Vec<u8>>(Input::Text(gen.to_string()),
-    //                                    &config,
-    //                                    Some(unsafe { out.as_mut_vec() }));
-    //if let Ok(fmt) = fmt_r {
-    //    println!("{}", out);
-    //}
+    let mut out = String::new();
+    let config =
+        config::Config { write_mode: config::WriteMode::Plain, ..config::Config::default() };
+    let fmt_r = format_input::<Vec<u8>>(Input::Text(gen.to_string()),
+                                        &config,
+                                        Some(unsafe { out.as_mut_vec() }));
+    if let Ok(fmt) = fmt_r {
+        println!("{}", out);
+    }
     gen.parse().unwrap()
 }
 
@@ -59,7 +59,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
                 unrolled_mul.append(
                     &format!(
                         "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) +=
-                            *self.get_unchecked({i}).get_unchecked({j}) * *other.get_unchecked({k}).get_unchecked({j});", i=i, j=j, k=k)
+                            *self.get_unchecked({i}).get_unchecked({k}) * *other.get_unchecked({k}).get_unchecked({j});", i=i, j=j, k=k)
                 );
             }
         }
@@ -130,6 +130,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
                 r
             }
        }
+
        impl<T> #ident<T>
             where T: Float {
             pub fn identity() -> Self {

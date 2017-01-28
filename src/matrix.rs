@@ -89,12 +89,12 @@ impl<T> Mat4<T>
     }
 
     pub fn look_at(eye: Vec3<T>, center: Vec3<T>, up: Vec3<T>) -> Self {
-        let z = Vec3::normalize(center - eye).unwrap();
-        let x = Vec3::cross(z, up).normalize().unwrap();
-        let y = Vec3::cross(x, z).normalize().unwrap();
+        let z = Vec3::normalize(eye - center).unwrap();
+        let x = Vec3::cross(up, z).normalize().unwrap();
+        let y = Vec3::cross(z, x).normalize().unwrap();
         Mat4::from_rows(x.extend(-x.dot(eye)),
                         y.extend(-y.dot(eye)),
-                        Vec4::new(-z.x, -z.y, -z.z, z.dot(eye)),
+                        z.extend(-z.dot(eye)),
                         Vec4::new(T::zero(), T::zero(), T::zero(), T::one()))
     }
 

@@ -55,13 +55,23 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
     let dim = fields.len();
     for i in 0..dim {
         for j in 0..dim {
+            let mut v = Vec::with_capacity(dim);
             for k in 0..dim {
-                unrolled_mul.append(
-                    &format!(
-                        "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) +=
-                            *self.get_unchecked({i}).get_unchecked({k}) * *other.get_unchecked({k}).get_unchecked({j});", i=i, j=j, k=k)
+                v.push(
+                    quote::Ident::new(format!(
+                            "*self.get_unchecked({i}).get_unchecked({k}) * *other.get_unchecked({k}).get_unchecked({j})", i=i, j=j, k=k))
                 );
+                // unrolled_mul.append(
+                //    format!(
+                //        "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) +=
+                //            *self.get_unchecked({i}).get_unchecked({k}) * *other.get_unchecked({k}).get_unchecked({j});", i=i, j=j, k=k)
+                // );
+
             }
+            unrolled_mul.append(&format!(
+                        "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) = ", i=i, j=j));
+            unrolled_mul.append_separated(v.iter(), "+");
+            unrolled_mul.append(";");
         }
     }
 
@@ -86,8 +96,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
             if i == j {
                 unrolled_identity.append(&format!(
                             "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) = T::one();", i=i, j=j));
-            }
-            else{
+            } else {
                 unrolled_identity.append(&format!(
                             "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) = T::zero();", i=i, j=j));
             }
@@ -158,7 +167,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
        }
 
        impl<'a, T> ::std::ops::Mul<#ty> for #ident<T>
-           where T: Float + ::std::ops::AddAssign{
+           where T: Float{
            type Output = #ty;
            fn mul(self, other: #ty) -> Self::Output {
                let mut r: #ty = unsafe{ ::std::mem::uninitialized()};

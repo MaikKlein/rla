@@ -51,31 +51,24 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
         token.append(&format!("{}: {},", field.as_ref(), quote!(#ty).as_str()));
         token
     });
-    let mut unrolled_mul = quote::Tokens::new();
     let dim = fields.len();
+    let mut vector_elem = Vec::with_capacity(dim);
     for i in 0..dim {
+        let mut elem_token = quote::Tokens::new();
         for j in 0..dim {
-            let mut v = Vec::with_capacity(dim);
+            let mut elem = Vec::with_capacity(dim);
             for k in 0..dim {
-                v.push(
-                    quote::Ident::new(format!(
-                            "*self.get_unchecked({i}).get_unchecked({k}) * *other.get_unchecked({k}).get_unchecked({j})", i=i, j=j, k=k))
-                );
-                // unrolled_mul.append(
-                //    format!(
-                //        "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) +=
-                //            *self.get_unchecked({i}).get_unchecked({k}) * *other.get_unchecked({k}).get_unchecked({j});", i=i, j=j, k=k)
-                // );
+                elem.push(quote::Ident::new(format!(
+                            "sr[{i}][{k}] * or[{k}][{j}]", i=i, j=j, k=k)));
 
             }
-            unrolled_mul.append(&format!(
-                        "*r.get_unchecked_mut({i}).get_unchecked_mut({j}) = ", i=i, j=j));
-            unrolled_mul.append_separated(v.iter(), "+");
-            unrolled_mul.append(";");
+            elem_token.append_separated(elem.iter(), "+");
+            elem_token.append(",");
         }
+        vector_elem.push(quote::Ident::new(format!("V::new({})", elem_token)));
     }
+    let vector_elem_ref = &vector_elem;
 
-    let unrolled_mul = unrolled_mul;
     let mut unrolled_transpose = quote::Tokens::new();
     for i in 0..dim {
         for j in 0..dim {
@@ -113,6 +106,15 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
             }
 
             #[inline]
+            pub fn as_ref(&self) -> &[[T; #dim]; #dim]{
+                unsafe{ ::std::mem::transmute(self) }
+            }
+            #[inline]
+            pub fn as_ref_mut(&mut self) -> &mut [[T; #dim]; #dim]{
+                unsafe{ ::std::mem::transmute(self) }
+            }
+
+            #[inline]
             pub fn as_raw_slice(&self) -> &[T]{
                 let ptr = &self.#first_field.x as *const T;
                 unsafe {
@@ -120,11 +122,13 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
                 }
             }
 
+            #[inline]
             pub unsafe fn get_unchecked(&self, idx: usize) -> &#ty{
                 let ptr = &self.#first_field as *const #ty;
                 &*ptr.offset(idx as isize)
             }
 
+            #[inline]
             pub unsafe fn get_unchecked_mut(&mut self, idx: usize) -> &mut #ty{
                 let ptr = &mut self.#first_field as *mut #ty;
                 &mut *ptr.offset(idx as isize)
@@ -143,6 +147,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
        impl<T> #ident<T>
             where T: Float {
             pub fn identity() -> Self {
+                type V<T> = #ty;
                 let mut r: Self = unsafe{ ::std::mem::uninitialized()};
                 unsafe{
                     #unrolled_identity
@@ -166,7 +171,7 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
            }
        }
 
-       impl<'a, T> ::std::ops::Mul<#ty> for #ident<T>
+       impl<T> ::std::ops::Mul<#ty> for #ident<T>
            where T: Float{
            type Output = #ty;
            fn mul(self, other: #ty) -> Self::Output {
@@ -178,17 +183,51 @@ fn gen_mat_derive(input: &MacroInput) -> quote::Tokens {
            }
        }
 
-       impl<'a, T> ::std::ops::Mul<&'a #ident<T>> for #ident<T>
-           where T: Float + ::std::ops::AddAssign{
-           type Output = #ident<T>;
-           fn mul(self, other: &'a #ident<T>) -> Self::Output {
-               let mut r: Self = unsafe{ ::std::mem::zeroed()};
+       impl<'a, T> ::std::ops::Mul<#ty> for &'a #ident<T>
+           where T: Float{
+           type Output = #ty;
+           fn mul(self, other: #ty) -> Self::Output {
+               let mut r: #ty = unsafe{ ::std::mem::uninitialized()};
                unsafe{
-                 #unrolled_mul
+                    #unrolled_mul_vec
                }
                r
            }
        }
+
+       impl<T> ::std::ops::Mul<#ident<T>> for #ident<T>
+           where T: Float{
+           type Output = #ident<T>;
+           fn mul(self, other: #ident<T>) -> Self::Output {
+               type V<T> = #ty;
+               let sr = self.as_ref();
+               let or = other.as_ref();
+               #ident::from_rows(#(#vector_elem_ref),*)
+           }
+       }
+
+       impl<'a, T> ::std::ops::Mul<&'a #ident<T>> for #ident<T>
+           where T: Float{
+           type Output = #ident<T>;
+           fn mul(self, other: &'a #ident<T>) -> Self::Output {
+               type V<T> = #ty;
+               let sr = self.as_ref();
+               let or = other.as_ref();
+               #ident::from_rows(#(#vector_elem_ref),*)
+           }
+       }
+
+       impl<'a, 'b, T> ::std::ops::Mul<&'a #ident<T>> for &'b #ident<T>
+           where T: Float{
+           type Output = #ident<T>;
+           fn mul(self, other: &'a #ident<T>) -> Self::Output {
+               type V<T> = #ty;
+               let sr = self.as_ref();
+               let or = other.as_ref();
+               #ident::from_rows(#(#vector_elem_ref),*)
+           }
+       }
+
     }
 }
 

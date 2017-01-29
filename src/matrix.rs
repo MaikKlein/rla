@@ -37,7 +37,7 @@ impl<T> Mat2<T>
 }
 
 impl<T> Mat4<T>
-    where T: Float + ::std::ops::AddAssign + ::std::fmt::Debug
+    where T: Float
 {
     pub fn scale(v: Vec3<T>) -> Self {
         let mut m = Mat4::identity();

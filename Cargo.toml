@@ -9,13 +9,5 @@ vec_derive = { path = "vec_derive"}
 num = "*"
 syn = "0.10.6"
 quote = "0.3.10"
-generic-array = "0.6.0"
+cgmath = "*"
 
-[profile.release]
-debug = true
-opt-level = 3
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'unwind'

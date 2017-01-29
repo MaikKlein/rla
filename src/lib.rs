@@ -6,9 +6,10 @@ extern crate vec_macros;
 extern crate num;
 #[macro_use]
 extern crate quote;
-extern crate generic_array;
 
 pub use ::vector::*;
 pub use ::matrix::*;
+pub use ::unit::*;
 mod vector;
 mod matrix;
+mod unit;

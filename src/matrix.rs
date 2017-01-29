@@ -102,17 +102,17 @@ impl<T> Mat4<T>
         let s = angle.sin();
         let c = angle.cos();
         Self::from_rows(Vec4::<T>::new(T::one(), T::zero(), T::zero(), T::zero()),
-                        Vec4::<T>::new(T::zero(), c, -s, T::zero()),
-                        Vec4::<T>::new(T::zero(), s, c, T::zero()),
+                        Vec4::<T>::new(T::zero(), c, s, T::zero()),
+                        Vec4::<T>::new(T::zero(), -s, c, T::zero()),
                         Vec4::<T>::new(T::zero(), T::zero(), T::zero(), T::one()))
     }
 
     pub fn rotation_y(angle: T) -> Self {
         let s = angle.sin();
         let c = angle.cos();
-        Self::from_rows(Vec4::<T>::new(c, T::zero(), s, T::zero()),
+        Self::from_rows(Vec4::<T>::new(c, T::zero(), -s, T::zero()),
                         Vec4::<T>::new(T::zero(), T::one(), T::zero(), T::zero()),
-                        Vec4::<T>::new(-s, T::zero(), c, T::zero()),
+                        Vec4::<T>::new(s, T::zero(), c, T::zero()),
                         Vec4::<T>::new(T::zero(), T::zero(), T::zero(), T::one()))
     }
 
